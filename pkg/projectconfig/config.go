@@ -28,7 +28,9 @@ type DeploymentConfig struct {
 type HardwareConfig struct {
 	CPU      *float64 `mapstructure:"cpu" toml:"cpu,omitempty"`
 	Memory   *float64 `mapstructure:"memory" toml:"memory,omitempty"`
-	Compute  *string  `mapstructure:"compute" toml:"compute,omitempty"`
+	ComputeRaw       interface{} `mapstructure:"compute" toml:"compute,omitempty"`
+	Compute          *string     `mapstructure:"-" toml:"-"`
+	ComputeFallbacks []string    `mapstructure:"-" toml:"-"`
 	GPUCount *int     `mapstructure:"gpu_count" toml:"gpu_count,omitempty"`
 	Provider *string  `mapstructure:"provider" toml:"provider,omitempty"`
 	Region   *string  `mapstructure:"region" toml:"region,omitempty"`
@@ -114,7 +116,12 @@ func (pc *ProjectConfig) ToPayload() map[string]any {
 		payload["memory"] = *pc.Hardware.Memory
 	}
 	if pc.Hardware.Compute != nil {
-		payload["compute"] = *pc.Hardware.Compute
+		if len(pc.Hardware.ComputeFallbacks) > 0 {
+			all := append([]string{*pc.Hardware.Compute}, pc.Hardware.ComputeFallbacks...)
+			payload["compute"] = all
+		} else {
+			payload["compute"] = *pc.Hardware.Compute
+		}
 	}
 	if pc.Hardware.GPUCount != nil && pc.Hardware.Compute != nil && *pc.Hardware.Compute != "CPU" {
 		payload["gpuCount"] = *pc.Hardware.GPUCount
@@ -159,6 +166,9 @@ func (pc *ProjectConfig) ToPayload() map[string]any {
 	}
 	if pc.Scaling.LoadBalancingAlgorithm != nil {
 		payload["loadBalancingAlgorithm"] = *pc.Scaling.LoadBalancingAlgorithm
+	}
+	if pc.Scaling.ComputeTier != nil {
+		payload["computeTier"] = *pc.Scaling.ComputeTier
 	}
 
 	// Runtime configuration
